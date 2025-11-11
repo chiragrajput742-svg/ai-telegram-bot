@@ -1,0 +1,49 @@
+import os
+import logging
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+import openai
+
+# Logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+)
+
+# API keys
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # Telegram bot token
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # OpenAI API key
+
+openai.api_key = OPENAI_API_KEY
+
+# Start command
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text(
+        "Hello! 🤖 I'm your AI bot.\nSend me any message and I will reply uniquely!"
+    )
+
+# Handle all messages
+def handle_message(update: Update, context: CallbackContext):
+    user_msg = update.message.text
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": user_msg}],
+            temperature=0.9,
+            max_tokens=300
+        )
+        answer = response.choices[0].message.content
+        update.message.reply_text(answer)
+    except Exception as e:
+        update.message.reply_text(f"Error: {e}")
+
+# Main
+def main():
+    updater = Updater(BOT_TOKEN, use_context=True)
+    dp = updater.dispatcher
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
